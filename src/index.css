@@ -1,0 +1,27 @@
+:root {
+  font-family: 'Inter Variable', system-ui, sans-serif;
+  color: #f3f4f6;
+  background-color: #283039;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 100%;
+  min-height: 100vh;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+code {
+  font-family: ui-monospace, Consolas, monospace;
+}
