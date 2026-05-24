@@ -1,3 +1,5 @@
+import ReactMarkdown from "react-markdown";
+
 interface ChatMessageProps {
   id: string;
   role: "user" | "assistant";
@@ -9,23 +11,37 @@ export function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
   const isUser = role === "user";
 
   return (
-    <article
-      className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}
-    >
-      <section
-        className={`max-w-xs lg:max-w-md xl:max-w-lg px-4 py-3 rounded-lg ${
-          isUser
-            ? "bg-purple-600 text-white rounded-br-none"
-            : "bg-gray-700 text-gray-100 rounded-bl-none"
-        }`}
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+      {!isUser && (
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-700 flex items-center justify-center font-bold shadow-lg flex-shrink-0 mr-4">
+          J
+        </div>
+      )}
+      <div
+        className={`max-w-[70%] ${isUser ? "flex flex-col items-end" : "flex flex-col items-start"}`}
       >
-        <p className="text-sm whitespace-pre-wrap">{content}</p>
+        <div
+          className={`px-6 py-5 rounded-3xl shadow-xl border ${
+            isUser
+              ? "bg-gradient-to-r from-fuchsia-600 to-violet-700 text-white rounded-br-none"
+              : "bg-slate-800 text-slate-200 border-slate-700 rounded-bl-none"
+          }`}
+        >
+          <div
+            className="text-sm leading-6 prose prose-invert prose-sm max-w-none
+              prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0
+              prose-strong:text-white prose-code:text-fuchsia-300
+              prose-code:bg-slate-700 prose-code:px-1 prose-code:rounded"
+          >
+            <ReactMarkdown>{content}</ReactMarkdown>
+          </div>
+        </div>
         <time
-          className={`text-xs mt-1 block ${isUser ? "text-purple-200" : "text-gray-400"}`}
+          className={`text-xs mt-2 ${isUser ? "text-slate-400" : "text-slate-500"}`}
         >
           {timestamp}
         </time>
-      </section>
-    </article>
+      </div>
+    </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { Sidebar } from "./Sidebar";
+import { askQuestion, uploadFile } from "../services/api";
 
 interface Message {
   id: string;
@@ -10,45 +11,27 @@ interface Message {
   timestamp: string;
 }
 
-const MOCK_MESSAGES: Message[] = [
+const now = () =>
+  new Date().toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+const INITIAL_MESSAGES: Message[] = [
   {
-    id: "1",
+    id: "0",
     role: "assistant",
     content:
       "Olá! Sou o Jarvis, seu assistente de IA. Como posso ajudá-lo hoje?",
-    timestamp: "10:30",
-  },
-  {
-    id: "2",
-    role: "user",
-    content: "Oi! Você pode me explicar como funciona machine learning?",
-    timestamp: "10:31",
-  },
-  {
-    id: "3",
-    role: "assistant",
-    content:
-      "Claro! Machine Learning é um ramo da Inteligência Artificial que permite aos sistemas aprender com dados sem serem explicitamente programados. Os algoritmos identificam padrões nos dados e melhoram seu desempenho com o tempo.",
-    timestamp: "10:32",
-  },
-  {
-    id: "4",
-    role: "user",
-    content: "E quais são os principais tipos de ML?",
-    timestamp: "10:33",
-  },
-  {
-    id: "5",
-    role: "assistant",
-    content:
-      "Os principais tipos são:\n\n1. **Supervisionado**: O modelo aprende com dados rotulados\n2. **Não supervisionado**: O modelo encontra padrões em dados não rotulados\n3. **Reforço**: O modelo aprende através de recompensas e punições",
-    timestamp: "10:34",
+    timestamp: now(),
   },
 ];
 
 export function ChatContainer() {
-  const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES);
+  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [filesRefreshKey, setFilesRefreshKey] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -59,60 +42,78 @@ export function ChatContainer() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = (content: string) => {
-    // Add user message
+  const handleSendMessage = async (content: string) => {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
       content,
-      timestamp: new Date().toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      timestamp: now(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const data = await askQuestion(content);
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: `Entendi sua pergunta: "${content}". Isso é uma resposta simulada. Para uma implementação real, você conectaria a um serviço de IA.`,
-        timestamp: new Date().toLocaleTimeString("pt-BR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        content: data.answer,
+        timestamp: now(),
       };
-
       setMessages((prev) => [...prev, assistantMessage]);
+    } catch {
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "Ocorreu um erro ao processar sua pergunta. Tente novamente.",
+        timestamp: now(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
+  };
+
+  const handleUploadFile = async (file: File) => {
+    setUploadStatus(`Enviando "${file.name}"...`);
+    try {
+      const data = await uploadFile(file);
+      setUploadStatus(`Arquivo "${data.filename}" enviado com sucesso.`);
+      setFilesRefreshKey((k) => k + 1);
+    } catch {
+      setUploadStatus(`Erro ao enviar o arquivo "${file.name}".`);
+    } finally {
+      setTimeout(() => setUploadStatus(null), 4000);
+    }
   };
 
   return (
-    <div className="flex h-screen bg-[#283039]">
+    <div className="flex h-screen bg-[#0b1120] overflow-hidden">
       {/* Sidebar */}
-      <Sidebar />
+      <Sidebar filesRefreshKey={filesRefreshKey} />
 
       {/* Main Chat Area */}
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col flex-1 overflow-hidden">
         {/* Header */}
-        <header className="bg-gray-800 border-b border-gray-700 px-6 py-4 shadow-lg">
-          <nav className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center">
-              J
+        <header className="bg-[#111827] border-b border-slate-800 px-6 py-3 shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-fuchsia-600 to-violet-700 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-lg">
+                J
+              </div>
+              <div>
+                <h1 className="text-white font-semibold text-lg">Jarvis AI</h1>
+                <p className="text-slate-400 text-sm">
+                  Assistente Acadêmico Inteligente
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-white font-semibold text-lg">Jarvis</h1>
-              <p className="text-gray-400 text-sm">Assistente de IA</p>
-            </div>
-          </nav>
+          </div>
         </header>
 
         {/* Messages */}
-        <main className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <main className="flex-1 overflow-y-auto px-8 py-6 space-y-6 bg-[#1e293b]">
           {messages.map((message) => (
             <ChatMessage
               key={message.id}
@@ -123,21 +124,44 @@ export function ChatContainer() {
             />
           ))}
           {isLoading && (
-            <article className="flex justify-start mb-4">
-              <section className="bg-gray-700 text-gray-100 rounded-lg rounded-bl-none px-4 py-3">
-                <div className="flex gap-2">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></div>
+            <div className="flex gap-4 items-start">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-700 flex items-center justify-center font-bold shadow-lg animate-pulse flex-shrink-0">
+                J
+              </div>
+              <div className="bg-slate-800 border border-slate-700 rounded-3xl px-6 py-5 shadow-xl">
+                <div className="flex gap-2 items-center">
+                  <div className="w-2 h-2 bg-fuchsia-500 rounded-full animate-bounce"></div>
+                  <div
+                    className="w-2 h-2 bg-fuchsia-500 rounded-full animate-bounce"
+                    style={{ animationDelay: "0.1s" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-fuchsia-500 rounded-full animate-bounce"
+                    style={{ animationDelay: "0.2s" }}
+                  ></div>
+                  <span className="text-sm text-slate-400 ml-3">
+                    Jarvis está analisando...
+                  </span>
                 </div>
-              </section>
-            </article>
+              </div>
+            </div>
           )}
           <div ref={messagesEndRef} />
         </main>
 
+        {/* Upload status */}
+        {uploadStatus && (
+          <div className="px-8 py-2 text-xs text-fuchsia-400 bg-slate-900 border-t border-slate-800">
+            {uploadStatus}
+          </div>
+        )}
+
         {/* Input */}
-        <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
+        <ChatInput
+          onSendMessage={handleSendMessage}
+          onUploadFile={handleUploadFile}
+          isLoading={isLoading}
+        />
       </div>
     </div>
   );
