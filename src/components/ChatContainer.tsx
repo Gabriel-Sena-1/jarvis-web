@@ -42,11 +42,11 @@ export function ChatContainer() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, toolCall?: string) => {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content,
+      content: toolCall ? `/${toolCall} ${content}`.trim() : content,
       timestamp: now(),
     };
 
@@ -54,7 +54,7 @@ export function ChatContainer() {
     setIsLoading(true);
 
     try {
-      const data = await askQuestion(content);
+      const data = await askQuestion(content, toolCall);
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -62,6 +62,7 @@ export function ChatContainer() {
         timestamp: now(),
       };
       setMessages((prev) => [...prev, assistantMessage]);
+      setFilesRefreshKey((k) => k + 1);
     } catch {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
