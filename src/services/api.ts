@@ -3,6 +3,7 @@ const BASE_URL = "http://localhost:8000/api";
 export interface AskResponse {
   answer: string;
   chunks_usados?: number;
+  chat_id?: number;
 }
 
 export interface FileUploadResponse {
@@ -25,11 +26,12 @@ export interface FileListResponse {
 export async function askQuestion(
   question: string,
   tool_call?: string,
+  chat_id?: number,
 ): Promise<AskResponse> {
   const response = await fetch(`${BASE_URL}/ask`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, tool_call: tool_call ?? null }),
+    body: JSON.stringify({ question, tool_call: tool_call ?? null, chat_id: chat_id ?? null }),
   });
 
   if (!response.ok) {
@@ -37,6 +39,37 @@ export async function askQuestion(
   }
 
   return response.json();
+}
+
+// ── Chats ───────────────────────────────────────────────────────────────────
+
+export interface Chat {
+  id: number;
+  title: string;
+}
+
+export interface ChatMessage {
+  id: number;
+  message: string;
+  role: "user" | "assistant";
+  chat_id: number;
+}
+
+export async function listChats(): Promise<Chat[]> {
+  const response = await fetch(`${BASE_URL}/chats`);
+  if (!response.ok) throw new Error(`Erro ao listar chats: ${response.statusText}`);
+  return response.json();
+}
+
+export async function getChatMessages(chatId: number): Promise<ChatMessage[]> {
+  const response = await fetch(`${BASE_URL}/chats/${chatId}/messages`);
+  if (!response.ok) throw new Error(`Erro ao buscar mensagens: ${response.statusText}`);
+  return response.json();
+}
+
+export async function deleteChatById(chatId: number): Promise<void> {
+  const response = await fetch(`${BASE_URL}/chats/${chatId}`, { method: "DELETE" });
+  if (!response.ok) throw new Error(`Erro ao deletar chat: ${response.statusText}`);
 }
 
 export async function uploadFile(file: File): Promise<FileUploadResponse> {

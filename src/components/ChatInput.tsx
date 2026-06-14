@@ -17,6 +17,22 @@ const TOOLS: { name: string; description: string }[] = [
     name: "buscar_material_rag",
     description: "Busca em documentos e materiais",
   },
+  {
+    name: "montar_plano_estudos",
+    description: "Gera um plano de estudos com base nos materiais e agenda",
+  },
+  {
+    name: "gerar_perguntas_recall",
+    description: "Inicia uma sessão de Active Recall (5 perguntas)",
+  },
+  {
+    name: "avaliar_resposta_recall",
+    description: "Avalia sua resposta para a pergunta de Active Recall atual",
+  },
+  {
+    name: "recomendar_revisao",
+    description: "Recomenda tópicos para revisar com base nos seus erros",
+  },
 ];
 
 interface ChatInputProps {

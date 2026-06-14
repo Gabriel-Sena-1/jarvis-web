@@ -1,16 +1,29 @@
 import { useEffect, useState } from "react";
-import { FileText, Calendar, Loader2, Plus, Check, X } from "lucide-react";
+import {
+  FileText,
+  Calendar,
+  Loader2,
+  Plus,
+  Check,
+  X,
+  MessageSquare,
+  Trash2,
+  PenSquare,
+} from "lucide-react";
 import {
   listFiles,
   listAgenda,
   createAgenda,
   concluirAgenda,
   deleteAgenda,
+  listChats,
+  deleteChatById,
 } from "../services/api";
 import type {
   FileInfo,
   AgendaItem,
   AgendaCreateRequest,
+  Chat,
 } from "../services/api";
 
 const EMPTY_FORM: AgendaCreateRequest = {
@@ -22,13 +35,25 @@ const EMPTY_FORM: AgendaCreateRequest = {
 
 interface SidebarProps {
   filesRefreshKey?: number;
+  currentChatId?: number | null;
+  chatsRefreshKey?: number;
+  onSelectChat?: (chatId: number) => void;
+  onNewChat?: () => void;
 }
 
-export function Sidebar({ filesRefreshKey = 0 }: SidebarProps) {
+export function Sidebar({
+  filesRefreshKey = 0,
+  currentChatId = null,
+  chatsRefreshKey = 0,
+  onSelectChat,
+  onNewChat,
+}: SidebarProps) {
   const [files, setFiles] = useState<FileInfo[]>([]);
   const [agenda, setAgenda] = useState<AgendaItem[]>([]);
+  const [chats, setChats] = useState<Chat[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(true);
   const [loadingAgenda, setLoadingAgenda] = useState(true);
+  const [loadingChats, setLoadingChats] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<AgendaCreateRequest>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -38,6 +63,14 @@ export function Sidebar({ filesRefreshKey = 0 }: SidebarProps) {
       .then(setAgenda)
       .catch(() => setAgenda([]))
       .finally(() => setLoadingAgenda(false));
+
+  const loadChats = () => {
+    setLoadingChats(true);
+    listChats()
+      .then(setChats)
+      .catch(() => setChats([]))
+      .finally(() => setLoadingChats(false));
+  };
 
   useEffect(() => {
     setLoadingFiles(true);
@@ -50,6 +83,10 @@ export function Sidebar({ filesRefreshKey = 0 }: SidebarProps) {
   useEffect(() => {
     loadAgenda();
   }, []);
+
+  useEffect(() => {
+    loadChats();
+  }, [chatsRefreshKey]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,15 +117,77 @@ export function Sidebar({ filesRefreshKey = 0 }: SidebarProps) {
     setAgenda((prev) => prev.filter((it) => it.id !== id));
   };
 
+  const handleDeleteChat = async (e: React.MouseEvent, chatId: number) => {
+    e.stopPropagation();
+    await deleteChatById(chatId);
+    setChats((prev) => prev.filter((c) => c.id !== chatId));
+    if (currentChatId === chatId) {
+      onNewChat?.();
+    }
+  };
+
   return (
     <aside className="w-64 h-screen bg-[#020617] border-r border-slate-800 flex flex-col py-5 overflow-hidden">
-      <div className="px-4 mb-5">
+      <div className="px-4 mb-5 flex items-center justify-between">
         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-fuchsia-600 to-violet-700 flex items-center justify-center text-lg font-bold shadow-lg text-white">
           J
         </div>
+        <button
+          onClick={onNewChat}
+          title="Nova conversa"
+          className="text-slate-500 hover:text-fuchsia-400 transition-colors p-1 rounded-lg hover:bg-slate-900"
+        >
+          <PenSquare size={15} />
+        </button>
       </div>
 
       <div className="flex flex-col gap-6 flex-1 overflow-y-auto px-4">
+
+        {/* CONVERSAS */}
+        <section>
+          <div className="flex items-center gap-2 mb-2">
+            <MessageSquare size={13} className="text-fuchsia-400" />
+            <span className="text-[9px] uppercase tracking-widest text-slate-500 font-semibold">
+              Conversas
+            </span>
+          </div>
+
+          {loadingChats ? (
+            <div className="flex items-center gap-2 px-2 py-1 text-slate-500 text-xs">
+              <Loader2 size={12} className="animate-spin" />
+              <span>Carregando...</span>
+            </div>
+          ) : chats.length === 0 ? (
+            <p className="text-xs text-slate-600 px-2">Nenhuma conversa</p>
+          ) : (
+            <ul className="flex flex-col gap-1">
+              {chats.map((chat) => {
+                const isActive = chat.id === currentChatId;
+                return (
+                  <li
+                    key={chat.id}
+                    onClick={() => onSelectChat?.(chat.id)}
+                    className={`group flex items-center justify-between gap-1 px-3 py-2 rounded-lg border text-xs cursor-pointer transition-all ${
+                      isActive
+                        ? "bg-fuchsia-600/20 border-fuchsia-600/40 text-fuchsia-300"
+                        : "bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-slate-800/80"
+                    }`}
+                  >
+                    <span className="truncate flex-1">{chat.title}</span>
+                    <button
+                      onClick={(e) => handleDeleteChat(e, chat.id)}
+                      title="Excluir conversa"
+                      className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all flex-shrink-0"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
         {/* DOCUMENTOS */}
         <section>
           <div className="flex items-center gap-2 mb-2">
